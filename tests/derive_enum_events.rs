@@ -1,4 +1,4 @@
-use bevy::prelude::Entity;
+use bevy_ecs::entity::Entity;
 use bevy_enum_event::{EnumEntityEvent, EnumEvent};
 
 // Test unit variants
@@ -93,50 +93,50 @@ fn test_mixed_variants() {
 }
 
 // Test deref for single-field tuple variant
-#[cfg(feature = "deref")]
-#[test]
-fn test_deref_tuple_variant() {
-    #[derive(EnumEvent, Clone)]
-    #[allow(dead_code)]
-    enum DerefTuple {
-        Value(String),
-    }
-
-    let mut val = deref_tuple::Value("test".to_string());
-
-    // Test Deref
-    let s: &String = &val;
-    assert_eq!(s, "test");
-
-    // Test DerefMut
-    let s_mut: &mut String = &mut val;
-    s_mut.push_str("_modified");
-    assert_eq!(val.0, "test_modified");
-}
+// #[cfg(feature = "deref")]
+// #[test]
+// fn test_deref_tuple_variant() {
+//     #[derive(EnumEvent, Clone)]
+//     #[allow(dead_code)]
+//     enum DerefTuple {
+//         Value(String),
+//     }
+//
+//     let mut val = deref_tuple::Value("test".to_string());
+//
+//     // Test Deref
+//     let s: &String = &val;
+//     assert_eq!(s, "test");
+//
+//     // Test DerefMut
+//     let s_mut: &mut String = &mut val;
+//     s_mut.push_str("_modified");
+//     assert_eq!(val.0, "test_modified");
+// }
 
 // Test deref for single-field named variant
-#[cfg(feature = "deref")]
-#[test]
-fn test_deref_named_variant() {
-    #[derive(EnumEvent, Clone)]
-    #[allow(dead_code)]
-    enum DerefNamed {
-        Value { data: String },
-    }
-
-    let mut val = deref_named::Value {
-        data: "test".to_string(),
-    };
-
-    // Test Deref
-    let s: &String = &val;
-    assert_eq!(s, "test");
-
-    // Test DerefMut
-    let s_mut: &mut String = &mut val;
-    s_mut.push_str("_modified");
-    assert_eq!(val.data, "test_modified");
-}
+// #[cfg(feature = "deref")]
+// #[test]
+// fn test_deref_named_variant() {
+//     #[derive(EnumEvent, Clone)]
+//     #[allow(dead_code)]
+//     enum DerefNamed {
+//         Value { data: String },
+//     }
+//
+//     let mut val = deref_named::Value {
+//         data: "test".to_string(),
+//     };
+//
+//     // Test Deref
+//     let s: &String = &val;
+//     assert_eq!(s, "test");
+//
+//     // Test DerefMut
+//     let s_mut: &mut String = &mut val;
+//     s_mut.push_str("_modified");
+//     assert_eq!(val.data, "test_modified");
+// }
 
 // Test that multi-field variants don't have deref
 #[test]
@@ -161,40 +161,40 @@ fn test_multi_field_variants() {
 }
 
 // Test deref support for multi-field variants when #[enum_event(deref)] is provided
-#[cfg(feature = "deref")]
-#[test]
-fn test_multi_field_deref_with_attribute() {
-    #[derive(EnumEvent, Clone)]
-    #[allow(dead_code)]
-    enum MultiFieldDeref {
-        Tuple(#[enum_event(deref)] String, i32),
-        Named {
-            #[enum_event(deref)]
-            value: String,
-            other: i32,
-        },
-    }
-
-    let mut tuple = multi_field_deref::Tuple("tuple".to_string(), 7);
-    let tuple_ref: &String = &tuple;
-    assert_eq!(tuple_ref, "tuple");
-
-    let tuple_ref_mut: &mut String = &mut tuple;
-    tuple_ref_mut.push_str("_updated");
-    assert_eq!(tuple.0, "tuple_updated");
-
-    let mut named = multi_field_deref::Named {
-        value: "named".to_string(),
-        other: 9,
-    };
-    let named_ref: &String = &named;
-    assert_eq!(named_ref, "named");
-
-    let named_ref_mut: &mut String = &mut named;
-    named_ref_mut.push_str("_updated");
-    assert_eq!(named.value, "named_updated");
-    assert_eq!(named.other, 9);
-}
+// #[cfg(feature = "deref")]
+// #[test]
+// fn test_multi_field_deref_with_attribute() {
+//     #[derive(EnumEvent, Clone)]
+//     #[allow(dead_code)]
+//     enum MultiFieldDeref {
+//         Tuple(#[enum_event(deref)] String, i32),
+//         Named {
+//             #[enum_event(deref)]
+//             value: String,
+//             other: i32,
+//         },
+//     }
+//
+//     let mut tuple = multi_field_deref::Tuple("tuple".to_string(), 7);
+//     let tuple_ref: &String = &tuple;
+//     assert_eq!(tuple_ref, "tuple");
+//
+//     let tuple_ref_mut: &mut String = &mut tuple;
+//     tuple_ref_mut.push_str("_updated");
+//     assert_eq!(tuple.0, "tuple_updated");
+//
+//     let mut named = multi_field_deref::Named {
+//         value: "named".to_string(),
+//         other: 9,
+//     };
+//     let named_ref: &String = &named;
+//     assert_eq!(named_ref, "named");
+//
+//     let named_ref_mut: &mut String = &mut named;
+//     named_ref_mut.push_str("_updated");
+//     assert_eq!(named.value, "named_updated");
+//     assert_eq!(named.other, 9);
+// }
 
 // Test Clone trait
 #[test]
@@ -256,9 +256,6 @@ fn test_generic_enum_support() {
 
     let data = 42;
     let reference = borrowed_enum::Reference(&data);
-    #[cfg(feature = "deref")]
-    assert_eq!(**reference, 42);
-    #[cfg(not(feature = "deref"))]
     assert_eq!(*reference.0, 42);
 
     let _borrowed_unit = borrowed_enum::Unit::default();
@@ -355,7 +352,7 @@ fn test_entity_event_propagate() {
 // Note: This test just verifies the macro accepts the syntax and generates valid code
 // The actual propagate relationship would be used at runtime by Bevy's observer system
 
-pub type CustomRelationship = ::bevy::prelude::ChildOf;
+pub type CustomRelationship = ::bevy_ecs::prelude::ChildOf;
 
 #[derive(EnumEntityEvent, Clone, Copy)]
 #[enum_event(propagate = &'static crate::CustomRelationship)]
@@ -376,45 +373,45 @@ fn test_entity_event_custom_propagate() {
 }
 
 // Test EntityEvent with deref on entity field
-#[cfg(feature = "deref")]
-#[test]
-fn test_entity_event_single_field_deref() {
-    #[derive(EnumEntityEvent, Clone, Copy)]
-    #[allow(dead_code)]
-    enum SingleFieldEntity {
-        Spawned { entity: Entity },
-    }
-
-    let entity = Entity::from_bits(99);
-    let spawned = single_field_entity::Spawned { entity };
-
-    // With single field, deref should work
-    let dereffed: &Entity = &spawned;
-    assert_eq!(*dereffed, entity);
-}
+// #[cfg(feature = "deref")]
+// #[test]
+// fn test_entity_event_single_field_deref() {
+//     #[derive(EnumEntityEvent, Clone, Copy)]
+//     #[allow(dead_code)]
+//     enum SingleFieldEntity {
+//         Spawned { entity: Entity },
+//     }
+//
+//     let entity = Entity::from_bits(99);
+//     let spawned = single_field_entity::Spawned { entity };
+//
+//     // With single field, deref should work
+//     let dereffed: &Entity = &spawned;
+//     assert_eq!(*dereffed, entity);
+// }
 
 // Test EntityEvent with deref on custom field
-#[cfg(feature = "deref")]
-#[test]
-fn test_entity_event_multi_field_deref() {
-    #[derive(EnumEntityEvent, Clone, Copy)]
-    #[allow(dead_code)]
-    enum MultiFieldEntity {
-        Scored {
-            #[enum_event(deref)]
-            entity: Entity,
-            points: u32,
-        },
-    }
-
-    let entity = Entity::from_bits(5);
-    let scored = multi_field_entity::Scored {
-        entity,
-        points: 100,
-    };
-
-    // Deref should give us the entity field
-    let dereffed: &Entity = &scored;
-    assert_eq!(*dereffed, entity);
-    assert_eq!(scored.points, 100);
-}
+// #[cfg(feature = "deref")]
+// #[test]
+// fn test_entity_event_multi_field_deref() {
+//     #[derive(EnumEntityEvent, Clone, Copy)]
+//     #[allow(dead_code)]
+//     enum MultiFieldEntity {
+//         Scored {
+//             #[enum_event(deref)]
+//             entity: Entity,
+//             points: u32,
+//         },
+//     }
+//
+//     let entity = Entity::from_bits(5);
+//     let scored = multi_field_entity::Scored {
+//         entity,
+//         points: 100,
+//     };
+//
+//     // Deref should give us the entity field
+//     let dereffed: &Entity = &scored;
+//     assert_eq!(*dereffed, entity);
+//     assert_eq!(scored.points, 100);
+// }

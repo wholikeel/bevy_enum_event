@@ -73,19 +73,10 @@ fn main() {
     println!("3. Single-field Variants with Deref (NetworkEvent):");
     let msg = network_event::MessageReceived("Hello, Bevy!".to_string());
 
-    #[cfg(feature = "deref")]
-    {
-        // With deref feature enabled (default), we can access the inner value directly
-        println!("  Message (via deref): {}", &*msg);
-        println!("  Message length (via deref): {} chars", msg.len());
-    }
 
-    #[cfg(not(feature = "deref"))]
-    {
-        // Without deref, access via .0
-        println!("  Message (via .0): {}", msg.0);
-        println!("  Message length (via .0): {} chars", msg.0.len());
-    }
+    // Without deref, access via .0
+    println!("  Message (via .0): {}", msg.0);
+    println!("  Message length (via .0): {} chars", msg.0.len());
 
     println!("\n=== Macro Summary ===");
     println!("EnumEvent    - Observer-based global events (triggers + observers)");

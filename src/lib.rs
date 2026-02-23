@@ -5,7 +5,7 @@
 //! # Quick Start
 //!
 //! ```rust
-//! use bevy::prelude::*;
+//! use bevy_ecs::prelude::*;
 //! use bevy_enum_event::EnumEvent;
 //!
 //! #[derive(EnumEvent, Clone, Copy)]
@@ -63,39 +63,12 @@
 //! // Each derives Message and is used with MessageWriter/MessageReader
 //! ```
 //!
-//! # Deref Feature (default)
-//!
-//! Single-field variants auto-implement `Deref`/`DerefMut`. For multi-field variants,
-//! use `#[enum_event(deref)]`. Disable with `default-features = false`.
-//!
-#![cfg_attr(
-    feature = "deref",
-    doc = r#"
-```
-use bevy_enum_event::EnumEvent;
-use std::ops::Deref;
-
-#[derive(EnumEvent, Clone)]
-enum NetworkEvent {
-    MessageReceived(String),
-    PlayerScored { #[enum_event(deref)] player: u32, points: u32 },
-}
-
-let msg = network_event::MessageReceived("Hello".to_string());
-assert_eq!(msg.deref(), "Hello");
-
-let scored = network_event::PlayerScored { player: 7, points: 120 };
-assert_eq!(*scored.deref(), 7);
-```
-"#
-)]
-//!
 //! # EnumEntityEvent
 //!
 //! Entity-targeted events. Requires named fields with `entity: Entity` or `#[enum_event(target)]`.
 //!
 //! ```rust
-//! use bevy::prelude::*;
+//! use bevy_ecs::prelude::*;
 //! use bevy_enum_event::EnumEntityEvent;
 //!
 //! #[derive(EnumEntityEvent, Clone, Copy)]
@@ -107,7 +80,7 @@ assert_eq!(*scored.deref(), 7);
 //! ## Custom Target
 //!
 //! ```rust
-//! use bevy::prelude::*;
+//! use bevy_ecs::prelude::*;
 //! use bevy_enum_event::EnumEntityEvent;
 //!
 //! #[derive(EnumEntityEvent, Clone, Copy)]
@@ -123,7 +96,7 @@ assert_eq!(*scored.deref(), 7);
 //! ## Propagation
 //!
 //! ```rust
-//! use bevy::prelude::*;
+//! use bevy_ecs::prelude::*;
 //! use bevy_enum_event::EnumEntityEvent;
 //!
 //! #[derive(EnumEntityEvent, Clone, Copy)]
@@ -139,7 +112,7 @@ assert_eq!(*scored.deref(), 7);
 //! }
 //!
 //! #[derive(EnumEntityEvent, Clone, Copy)]
-//! #[enum_event(propagate = &'static ::bevy::prelude::ChildOf)]
+//! #[enum_event(propagate = &'static ::bevy_ecs::prelude::ChildOf)]
 //! enum CustomEvent {
 //!     Action { entity: Entity },
 //! }
@@ -227,8 +200,6 @@ fn path_ends_with_ident(path: &syn::Path, ident: &str) -> bool {
 #[derive(Default)]
 struct FieldAttrInfo {
     passthrough_attrs: Vec<Attribute>,
-    has_deref: bool,
-    has_deref_mut: bool,
     is_event_target: bool,
 }
 
@@ -244,12 +215,7 @@ fn analyze_field_attrs(attrs: &[Attribute]) -> FieldAttrInfo {
     for attr in attrs {
         if path_ends_with_ident(attr.path(), "enum_event") {
             if let Err(err) = attr.parse_nested_meta(|meta| {
-                if path_ends_with_ident(&meta.path, "deref") {
-                    info.has_deref = true;
-                } else if path_ends_with_ident(&meta.path, "deref_mut") {
-                    info.has_deref_mut = true;
-                    info.has_deref = true;
-                } else if path_ends_with_ident(&meta.path, "target") {
+                if path_ends_with_ident(&meta.path, "target") {
                     info.is_event_target = true;
                 }
                 Ok(())
@@ -258,11 +224,6 @@ fn analyze_field_attrs(attrs: &[Attribute]) -> FieldAttrInfo {
             }
         } else if path_ends_with_ident(attr.path(), "event_target") {
             info.is_event_target = true;
-        } else if path_ends_with_ident(attr.path(), "deref") {
-            info.has_deref = true;
-        } else if path_ends_with_ident(attr.path(), "deref_mut") {
-            info.has_deref_mut = true;
-            info.has_deref = true;
         } else {
             info.passthrough_attrs.push(attr.clone());
         }
@@ -354,7 +315,7 @@ pub fn derive_enum_messages(input: TokenStream) -> TokenStream {
 /// Requires named fields with `entity: Entity` or `#[enum_event(target)]`.
 ///
 /// ```rust
-/// use bevy::prelude::*;
+/// use bevy_ecs::prelude::*;
 /// use bevy_enum_event::EnumEntityEvent;
 ///
 /// #[derive(EnumEntityEvent, Clone, Copy)]
@@ -367,7 +328,7 @@ pub fn derive_enum_messages(input: TokenStream) -> TokenStream {
 /// # Propagation
 ///
 /// ```rust
-/// use bevy::prelude::*;
+/// use bevy_ecs::prelude::*;
 /// use bevy_enum_event::EnumEntityEvent;
 ///
 /// #[derive(EnumEntityEvent, Clone, Copy)]
@@ -509,7 +470,7 @@ fn derive_enum_event_impl(input: TokenStream, event_kind: EventKind) -> TokenStr
     // Generate struct definitions for each variant
     let mut struct_defs = Vec::new();
     let mut additional_impls = Vec::new();
-    let mut uses_deref_derives = false;
+    // let mut uses_deref_derives = false;
 
     for variant in variants {
         let variant_ident = &variant.ident;
@@ -658,33 +619,12 @@ fn derive_enum_event_impl(input: TokenStream, event_kind: EventKind) -> TokenStr
                         (info, &field.ty)
                     })
                     .collect();
-                let field_count = field_infos.len();
-                let deref_attr_fields = field_infos
-                    .iter()
-                    .filter(|(info, _)| info.has_deref)
-                    .count();
-
-                assert!(!(field_count > 1 && deref_attr_fields > 1),
-                        "bevy_enum_event: variant `{variant_ident}` has multiple fields marked for deref (e.g., #[enum_event(deref)]); only one field can be dereferenced"
-                    );
-
-                let should_derive_deref =
-                    cfg!(feature = "deref") && (field_count == 1 || deref_attr_fields == 1);
 
                 let mut field_tokens: Vec<_> = field_infos
                     .iter()
                     .map(|(info, ty)| {
                         let passthrough_attrs = info.passthrough_attrs.iter();
-                        let mut marker_attrs = Vec::new();
-
-                        if should_derive_deref {
-                            if info.has_deref {
-                                marker_attrs.push(quote!(#[deref]));
-                            }
-                            if info.has_deref_mut {
-                                marker_attrs.push(quote!(#[deref_mut]));
-                            }
-                        }
+                        let mut marker_attrs: Vec<proc_macro2::TokenStream> = Vec::new();
 
                         quote! {
                             #(#passthrough_attrs)*
@@ -727,21 +667,11 @@ fn derive_enum_event_impl(input: TokenStream, event_kind: EventKind) -> TokenStr
                     });
                 }
 
-                if should_derive_deref {
-                    uses_deref_derives = true;
-                    quote! {
-                        #[doc = #struct_doc]
-                        #[allow(unused_lifetimes, unused_type_parameters)]
-                        #[derive(#event_derive, Deref, DerefMut, Clone, Debug)]
-                        pub struct #variant_ident #struct_generics_tokens(#(#field_tokens),*) #where_clause;
-                    }
-                } else {
-                    quote! {
-                        #[doc = #struct_doc]
-                        #[allow(unused_lifetimes, unused_type_parameters)]
-                        #[derive(#event_derive, Clone, Debug)]
-                        pub struct #variant_ident #struct_generics_tokens(#(#field_tokens),*) #where_clause;
-                    }
+                quote! {
+                    #[doc = #struct_doc]
+                    #[allow(unused_lifetimes, unused_type_parameters)]
+                    #[derive(#event_derive, Clone, Debug)]
+                    pub struct #variant_ident #struct_generics_tokens(#(#field_tokens),*) #where_clause;
                 }
             }
             Fields::Named(fields) => {
@@ -759,21 +689,6 @@ fn derive_enum_event_impl(input: TokenStream, event_kind: EventKind) -> TokenStr
                         (info, field_name, &field.ty)
                     })
                     .collect();
-                let field_count = field_infos.len();
-                let deref_attr_fields = field_infos
-                    .iter()
-                    .filter(|(info, _, _)| info.has_deref)
-                    .count();
-
-                assert!(!(field_count > 1 && deref_attr_fields > 1),
-                        "bevy_enum_event: variant `{variant_ident}` has multiple fields marked for deref (e.g., #[enum_event(deref)]); only one field can be dereferenced"
-                    );
-
-                let should_derive_deref =
-                    cfg!(feature = "deref") && (field_count == 1 || deref_attr_fields == 1);
-
-                let auto_mark_single_field =
-                    should_derive_deref && deref_attr_fields == 0 && field_count == 1;
 
                 let mut field_tokens: Vec<_> = field_infos
                     .iter()
@@ -784,19 +699,6 @@ fn derive_enum_event_impl(input: TokenStream, event_kind: EventKind) -> TokenStr
                         // Add event_target attribute for EntityEvent
                         if is_entity_event && (info.is_event_target || field_name == "entity") {
                             marker_attrs.push(quote!(#[event_target]));
-                        }
-
-                        if should_derive_deref {
-                            if info.has_deref {
-                                marker_attrs.push(quote!(#[deref]));
-                            }
-                            if info.has_deref_mut {
-                                marker_attrs.push(quote!(#[deref_mut]));
-                            } else if auto_mark_single_field {
-                                marker_attrs.push(quote!(#[deref]));
-                            }
-                        } else if auto_mark_single_field {
-                            marker_attrs.push(quote!(#[deref]));
                         }
 
                         quote! {
@@ -872,26 +774,13 @@ fn derive_enum_event_impl(input: TokenStream, event_kind: EventKind) -> TokenStr
                     quote! {}
                 };
 
-                if should_derive_deref {
-                    uses_deref_derives = true;
-                    quote! {
-                        #[doc = #struct_doc]
-                        #[allow(unused_lifetimes, unused_type_parameters)]
-                        #[derive(#event_derive, Deref, DerefMut, Clone, Debug)]
-                        #propagate_attr
-                        pub struct #variant_ident #struct_generics_tokens #where_clause {
-                            #(#field_tokens)*
-                        }
-                    }
-                } else {
-                    quote! {
-                        #[doc = #struct_doc]
-                        #[allow(unused_lifetimes, unused_type_parameters)]
-                        #[derive(#event_derive, Clone, Debug)]
-                        #propagate_attr
-                        pub struct #variant_ident #struct_generics_tokens #where_clause {
-                            #(#field_tokens)*
-                        }
+                quote! {
+                    #[doc = #struct_doc]
+                    #[allow(unused_lifetimes, unused_type_parameters)]
+                    #[derive(#event_derive, Clone, Debug)]
+                    #propagate_attr
+                    pub struct #variant_ident #struct_generics_tokens #where_clause {
+                        #(#field_tokens)*
                     }
                 }
             }
@@ -903,23 +792,15 @@ fn derive_enum_event_impl(input: TokenStream, event_kind: EventKind) -> TokenStr
         }
     }
 
-    let deref_imports = if cfg!(feature = "deref") && uses_deref_derives {
-        quote! {
-            use bevy::prelude::{Deref, DerefMut};
-        }
-    } else {
-        quote! {}
-    };
-
     let event_import = match event_kind {
         EventKind::EntityEvent => quote! {
-            use bevy::prelude::{Entity, EntityEvent};
+            use bevy_ecs::{entity::Entity, event::EntityEvent};
         },
         EventKind::Message => quote! {
-            use bevy::ecs::message::Message;
+            use bevy_ecs::message::Message;
         },
         EventKind::Event => quote! {
-            use bevy::prelude::Event;
+            use bevy_ecs::event::Event;
         },
     };
 
@@ -935,7 +816,6 @@ fn derive_enum_event_impl(input: TokenStream, event_kind: EventKind) -> TokenStr
             #[allow(unused_imports)]
             use super::*;
             #event_import
-            #deref_imports
 
             #(#struct_defs)*
             #(#additional_impls)*

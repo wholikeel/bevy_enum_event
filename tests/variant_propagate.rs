@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use bevy_enum_event::EnumEntityEvent;
 
 // Test 1: Enum-level propagate applies to all variants
@@ -35,7 +35,7 @@ enum MixedPropagateEvent {
     },
 
     // Overrides with custom relationship
-    #[enum_event(propagate = &'static ::bevy::prelude::ChildOf)]
+    #[enum_event(propagate = &'static ::bevy_ecs::prelude::ChildOf)]
     Custom {
         entity: Entity,
     },
@@ -65,7 +65,7 @@ enum VariantOnlyPropagateEvent {
     },
 
     // Has auto_propagate with custom relationship
-    #[enum_event(auto_propagate, propagate = &'static ::bevy::prelude::ChildOf)]
+    #[enum_event(auto_propagate, propagate = &'static ::bevy_ecs::prelude::ChildOf)]
     Auto {
         entity: Entity,
     },
@@ -91,13 +91,13 @@ enum AutoPropagateOverrideEvent {
     },
 
     // Override: removes auto_propagate, uses custom relation
-    #[enum_event(propagate = &'static ::bevy::prelude::ChildOf)]
+    #[enum_event(propagate = &'static ::bevy_ecs::prelude::ChildOf)]
     NoAutoCustomRel {
         entity: Entity,
     },
 
     // Override: keeps auto_propagate, uses custom relation
-    #[enum_event(auto_propagate, propagate = &'static ::bevy::prelude::ChildOf)]
+    #[enum_event(auto_propagate, propagate = &'static ::bevy_ecs::prelude::ChildOf)]
     WithAutoCustomRel {
         entity: Entity,
     },
