@@ -810,6 +810,57 @@ fn derive_enum_event_impl(input: TokenStream, event_kind: EventKind) -> TokenStr
         EventKind::Event => "Generated module containing event types for each enum variant.",
     };
 
+    let convert_arms = variants.iter().map(|variant| {
+        let variant_ident = &variant.ident;
+
+        match &variant.fields {
+            syn::Fields::Unit => {
+                quote! {
+                    #enum_name::#variant_ident =>
+                    $func(#module_name::#variant_ident),
+                }
+            }
+
+            syn::Fields::Unnamed(fields) => {
+                let bindings: Vec<_> = (0..fields.unnamed.len())
+                    .map(|i| syn::Ident::new(&format!("__arg{i}"), variant_ident.span()))
+                    .collect();
+
+                quote! {
+                    #enum_name::#variant_ident(#(#bindings),*) =>
+                    $func(#module_name::#variant_ident(#(#bindings),*)),
+                }
+            }
+
+            syn::Fields::Named(fields) => {
+                let bindings: Vec<_> = fields.named.iter().map(|f| {
+                    f.ident.clone().unwrap()
+                }).collect();
+
+                quote! {
+                    #enum_name::#variant_ident { #(#bindings),* } =>
+                    $func(#module_name::#variant_ident { #(#bindings),* }),
+                }
+            }
+        }
+    });
+
+    let convert_macro_name = syn::Ident::new(
+        &format!("convert_{}", module_name),
+        enum_name.span(),
+    );
+
+    let convert_macro = quote! {
+        #[macro_export]
+        macro_rules! #convert_macro_name {
+            ($func:expr, $value:expr) => {
+                match $value {
+                    #(#convert_arms)*
+                }
+            };
+        }
+    };
+
     let expanded = quote! {
         #[doc = #module_doc]
         pub mod #module_name {
@@ -820,6 +871,8 @@ fn derive_enum_event_impl(input: TokenStream, event_kind: EventKind) -> TokenStr
             #(#struct_defs)*
             #(#additional_impls)*
         }
+
+        #convert_macro
     };
 
     TokenStream::from(expanded)
