@@ -1,3 +1,10 @@
+
+
+This is a fork that makes bevy_enum_event work with just bevy_ecs removing the bevy requirement.
+
+Deref feature flag not implemented.
+
+
 # bevy_enum_event
 
 Derive macros that generate Bevy event and message types from enum variants.
